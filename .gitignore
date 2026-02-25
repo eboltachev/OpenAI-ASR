@@ -1,0 +1,4 @@
+models/
+tempfiles/
+cache/
+.env
