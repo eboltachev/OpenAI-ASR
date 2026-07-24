@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Any
 from uuid import uuid4
 
 from app.domain.models import JobStatus, TranscriptionOptions
@@ -46,7 +47,10 @@ class JobStore:
         job["updated_at"] = _now()
         path = self.root / job["id"] / "job.json"
         temporary = path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(job, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+        temporary.write_text(
+            json.dumps(job, ensure_ascii=False, indent=2, default=str),
+            encoding="utf-8",
+        )
         temporary.replace(path)
 
     def get(self, job_id: str) -> dict[str, Any]:
@@ -63,7 +67,9 @@ class JobStore:
 
     def save_result(self, job_id: str, result: dict[str, Any]) -> None:
         path = self.root / job_id / "result.json"
-        path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+        path.write_text(
+            json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
     def recoverable(self) -> list[str]:
         jobs: list[str] = []
@@ -92,7 +98,10 @@ class JobManager:
     async def start(self) -> None:
         for job_id in self.store.recoverable():
             await self._queue.put(job_id)
-        self._tasks = [asyncio.create_task(self._worker(index)) for index in range(self._worker_count)]
+        self._tasks = [
+            asyncio.create_task(self._worker(index))
+            for index in range(self._worker_count)
+        ]
 
     async def stop(self) -> None:
         for task in self._tasks:
@@ -100,7 +109,9 @@ class JobManager:
         await asyncio.gather(*self._tasks, return_exceptions=True)
         self._tasks.clear()
 
-    async def submit(self, source: Path, options: TranscriptionOptions) -> dict[str, Any]:
+    async def submit(
+        self, source: Path, options: TranscriptionOptions
+    ) -> dict[str, Any]:
         job = self.store.create(source, options)
         await self._queue.put(job["id"])
         return self.public(job)
@@ -118,7 +129,9 @@ class JobManager:
                 options = TranscriptionOptions(**job["options"])
                 result = await self._processor(Path(job["input_path"]), options)
                 self.store.save_result(job_id, result)
-                Path(job["input_path"]).unlink(missing_ok=True)
+                await asyncio.to_thread(
+                    Path(job["input_path"]).unlink, missing_ok=True
+                )
                 job["status"] = JobStatus.SUCCEEDED
                 self.store.save(job)
             except asyncio.CancelledError:
