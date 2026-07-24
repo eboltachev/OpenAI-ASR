@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from app.core.security import BearerAuth
+from app.domain.languages import normalize_language
 from app.domain.models import JobStatus, TranscriptionOptions
 from app.services.serialization import to_srt, to_vtt
 
@@ -23,9 +24,7 @@ def create_router(auth: BearerAuth) -> APIRouter:
         pipeline = request.app.state.pipeline
         if pipeline.ready:
             return JSONResponse({"status": "ok"})
-        return JSONResponse(
-            {"status": "not_ready", "error": pipeline.initialization_error}, status_code=503
-        )
+        return JSONResponse({"status": "not_ready", "error": pipeline.initialization_error}, status_code=503)
 
     @router.get("/v1/models", dependencies=[Depends(auth)])
     async def models(request: Request) -> dict[str, Any]:
@@ -62,7 +61,7 @@ def create_router(auth: BearerAuth) -> APIRouter:
         source = await request.app.state.pipeline.audio.save_upload(file)
         options = TranscriptionOptions(
             model=model or settings.default_asr_model,
-            language=language.lower() if language else None,
+            language=normalize_language(language),
             prompt=prompt,
             temperature=temperature,
             response_format=response_format,

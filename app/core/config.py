@@ -55,7 +55,7 @@ class Settings:
     alignment_models: dict[str, str]
 
     @classmethod
-    def from_env(cls) -> "Settings":
+    def from_env(cls) -> Settings:
         alignment_models: dict[str, str] = {}
         raw_json = os.getenv("ALIGNMENT_MODELS_JSON", "").strip()
         if raw_json:
@@ -80,9 +80,7 @@ class Settings:
             hf_token=os.getenv("HF_TOKEN") or None,
             service_api_key=os.getenv("SERVICE_API_KEY") or None,
             default_asr_model=os.getenv("DEFAULT_ASR_MODEL", "openai/whisper-large-v3"),
-            diarization_model=os.getenv(
-                "DIARIZATION_MODEL", "pyannote/speaker-diarization-community-1"
-            ),
+            diarization_model=os.getenv("DIARIZATION_MODEL", "pyannote/speaker-diarization-community-1"),
             speaker_embedding_model=os.getenv(
                 "SPEAKER_EMBEDDING_MODEL", "pyannote/wespeaker-voxceleb-resnet34-LM"
             ),

@@ -5,7 +5,6 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
-
 FloatVector = NDArray[np.float32]
 
 
@@ -40,10 +39,7 @@ def aggregate_embeddings(
         accepted = np.array([int(np.argmax(similarities))])
     accepted_vectors = vectors[accepted]
     weights = np.asarray(
-        [
-            max(0.0, samples[index].quality) * max(0.0, samples[index].duration)
-            for index in accepted
-        ],
+        [max(0.0, samples[index].quality) * max(0.0, samples[index].duration) for index in accepted],
         dtype=np.float32,
     )
     if float(weights.sum()) <= 1e-12:

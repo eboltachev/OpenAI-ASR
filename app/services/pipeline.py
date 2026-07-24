@@ -8,7 +8,7 @@ from typing import Any
 
 from app.core.config import Settings
 from app.domain.models import JsonDict, SpeakerTurn, TranscriptionOptions
-from app.domain.turns import merge_adjacent_same_speaker
+from app.domain.turns import merge_adjacent_same_speaker, padded_turn_bounds
 from app.services.alignment import AlignmentService
 from app.services.audio import AudioService
 from app.services.diarization import DiarizationService
@@ -61,26 +61,36 @@ class TranscriptionPipeline:
                     min_speakers=options.min_speakers,
                     max_speakers=options.max_speakers,
                 )
-                turns = merge_adjacent_same_speaker(
-                    raw_turns, max_gap_seconds=options.merge_gap_seconds
-                )
+                turns = merge_adjacent_same_speaker(raw_turns, max_gap_seconds=options.merge_gap_seconds)
                 if options.return_speaker_embeddings:
                     await self.embeddings.attach_embeddings(normalized, turns, overlaps)
+
                 segment_results = await asyncio.gather(
                     *[
                         self._process_turn(
                             turn,
+                            crop_start=crop_start,
+                            crop_end=crop_end,
                             waveform=waveform,
                             sample_rate=sample_rate,
-                            audio_duration=audio_duration,
                             options=options,
                         )
-                        for turn in turns
+                        for index, turn in enumerate(turns)
+                        for crop_start, crop_end in [
+                            padded_turn_bounds(
+                                turns,
+                                index,
+                                audio_duration=audio_duration,
+                                padding_seconds=self.settings.segment_padding_seconds,
+                            )
+                        ]
                     ]
                 )
                 segments = sorted(segment_results, key=lambda item: (item["start"], item["end"]))
                 words = [word for segment in segments for word in segment.get("words", [])]
-                languages = list(dict.fromkeys(segment["language"] for segment in segments if segment.get("language")))
+                languages = list(
+                    dict.fromkeys(segment["language"] for segment in segments if segment.get("language"))
+                )
                 result: JsonDict = {
                     "task": "transcribe",
                     "duration": audio_duration,
@@ -107,14 +117,13 @@ class TranscriptionPipeline:
         self,
         turn: SpeakerTurn,
         *,
+        crop_start: float,
+        crop_end: float,
         waveform: Any,
         sample_rate: int,
-        audio_duration: float,
         options: TranscriptionOptions,
     ) -> JsonDict:
-        start = max(0.0, turn.start - self.settings.segment_padding_seconds)
-        end = min(audio_duration, turn.end + self.settings.segment_padding_seconds)
-        crop = self.audio.crop(waveform, sample_rate, start, end)
+        crop = self.audio.crop(waveform, sample_rate, crop_start, crop_end)
         wav_bytes = self.audio.to_wav_bytes(crop, sample_rate)
         upstream = await self.upstream.transcribe(
             wav_bytes,
@@ -129,13 +138,13 @@ class TranscriptionPipeline:
             sample_rate=sample_rate,
             text=upstream.text,
             language=language,
-            duration=end - start,
+            duration=crop_end - crop_start,
         )
         global_words = [
             {
                 **word,
-                "start": start + float(word["start"]),
-                "end": start + float(word["end"]),
+                "start": crop_start + float(word["start"]),
+                "end": crop_start + float(word["end"]),
                 "speaker": turn.speaker,
                 "language": language,
             }
@@ -151,7 +160,5 @@ class TranscriptionPipeline:
             "words": global_words,
             "speaker_embedding": turn.embedding,
             "speaker_embedding_quality": turn.embedding_quality,
-            "source_segments": [
-                {"start": span.start, "end": span.end} for span in turn.source_spans
-            ],
+            "source_segments": [{"start": span.start, "end": span.end} for span in turn.source_spans],
         }

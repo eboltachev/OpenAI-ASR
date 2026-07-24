@@ -30,7 +30,12 @@ class AudioService:
                     if total > self._max_upload_bytes:
                         raise HTTPException(
                             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                            detail={"error": {"message": "Audio file is too large", "type": "invalid_request_error"}},
+                            detail={
+                                "error": {
+                                    "message": "Audio file is too large",
+                                    "type": "invalid_request_error",
+                                }
+                            },
                         )
                     target.write(chunk)
         except Exception:

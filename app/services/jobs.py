@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from collections.abc import Awaitable, Callable
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Any
 from uuid import uuid4
 
 from app.domain.models import JobStatus, TranscriptionOptions
@@ -46,7 +47,10 @@ class JobStore:
         job["updated_at"] = _now()
         path = self.root / job["id"] / "job.json"
         temporary = path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(job, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+        temporary.write_text(
+            json.dumps(job, ensure_ascii=False, indent=2, default=str),
+            encoding="utf-8",
+        )
         temporary.replace(path)
 
     def get(self, job_id: str) -> dict[str, Any]:
@@ -118,7 +122,7 @@ class JobManager:
                 options = TranscriptionOptions(**job["options"])
                 result = await self._processor(Path(job["input_path"]), options)
                 self.store.save_result(job_id, result)
-                Path(job["input_path"]).unlink(missing_ok=True)
+                await asyncio.to_thread(Path(job["input_path"]).unlink, missing_ok=True)
                 job["status"] = JobStatus.SUCCEEDED
                 self.store.save(job)
             except asyncio.CancelledError:
@@ -134,8 +138,4 @@ class JobManager:
 
     @staticmethod
     def public(job: dict[str, Any]) -> dict[str, Any]:
-        return {
-            key: value
-            for key, value in job.items()
-            if key not in {"input_path", "options", "worker"}
-        }
+        return {key: value for key, value in job.items() if key not in {"input_path", "options", "worker"}}

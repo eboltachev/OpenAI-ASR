@@ -48,7 +48,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="OpenAI ASR",
     version="1.0.0",
-    description="OpenAI-compatible ASR with multilingual diarization, forced alignment and speaker embeddings",
+    description=(
+        "OpenAI-compatible ASR with multilingual diarization, forced alignment and speaker embeddings"
+    ),
     lifespan=lifespan,
 )
 app.include_router(create_router(BearerAuth(settings)))
@@ -96,7 +98,11 @@ async def request_logging(request: Request, call_next):
     except Exception:
         logger.exception(
             "request_failed",
-            extra={"request_id": request_id, "method": request.method, "path": request.url.path},
+            extra={
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+            },
         )
         raise
     response.headers["x-request-id"] = request_id

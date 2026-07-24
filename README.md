@@ -1,17 +1,17 @@
 # OpenAI-ASR
 
-OpenAI-compatible service for offline speaker diarization and speaker embeddings combined with an external OpenAI-compatible Whisper endpoint (for example, vLLM).
+OpenAI-compatible service for offline speaker diarization and speaker embeddings combined with an external OpenAI-compatible Whisper endpoint such as vLLM.
 
 ## Processing pipeline
 
 1. Audio is normalized to mono PCM, 16 kHz.
 2. `pyannote/speaker-diarization-community-1` produces regular and exclusive diarization.
-3. Adjacent exclusive intervals with the same speaker are merged when the gap does not exceed the configured threshold.
-4. A representative speaker embedding is calculated from clean source intervals and aggregated as a duration/quality-weighted L2-normalized centroid.
-5. Every merged speaker segment is sent asynchronously to `OPENAI_BASE_URL`; the requested `model` value is forwarded unchanged.
-6. When `language` is omitted, the upstream Whisper endpoint detects a language independently for every merged segment.
+3. Adjacent exclusive intervals with the same speaker are merged when their gap does not exceed the configured threshold.
+4. A representative segment embedding is calculated from clean source intervals as a duration/quality-weighted L2-normalized centroid.
+5. Every merged speaker segment is sent asynchronously to `OPENAI_BASE_URL`; the request `model` value is forwarded unchanged.
+6. When `language` is omitted, the upstream Whisper endpoint detects it independently for every merged segment. Names such as `Russian` and `Uzbek` are normalized to `ru` and `uz` before alignment.
 7. A language-specific alignment model produces word timestamps.
-8. The service returns diarized text, words, segment embeddings and whole-recording speaker profiles.
+8. The response contains diarized text, words, segment embeddings and whole-recording speaker profiles.
 
 ## Start
 
@@ -25,7 +25,7 @@ The service is published on `${API_PORT}`. Models and Hugging Face caches are pe
 
 Before the first online model download, accept the Hugging Face terms for the configured gated pyannote model. For an air-gapped installation, put complete model repositories below `./models` and set the corresponding environment variables to absolute container paths, for example `/app/models/diarization/community-1`.
 
-## Synchronous OpenAI-compatible request
+## Synchronous OpenAI client
 
 ```python
 from openai import OpenAI
@@ -47,9 +47,37 @@ with open("dialog.wav", "rb") as audio:
 print(result.model_dump())
 ```
 
+## Nonblocking OpenAI client
+
+The standard transcription endpoint also works with `AsyncOpenAI`; requests are handled concurrently and the model name is forwarded unchanged.
+
+```python
+import asyncio
+
+from openai import AsyncOpenAI
+
+
+async def main() -> None:
+    client = AsyncOpenAI(
+        api_key="service-key",
+        base_url="http://localhost:8000/v1",
+    )
+    with open("dialog.wav", "rb") as audio:
+        result = await client.audio.transcriptions.create(
+            file=audio,
+            model="openai/whisper-large-v3",
+            response_format="diarized_json",
+        )
+    print(result.model_dump())
+    await client.close()
+
+
+asyncio.run(main())
+```
+
 When `language` is supplied, it is forwarded for every segment. When omitted, each merged speaker segment is submitted without a language and receives its own detected language.
 
-## Asynchronous request
+## Persistent asynchronous job
 
 Use the same endpoint with the custom multipart field `async=true`, or call `/v1/audio/transcriptions/jobs` directly:
 
