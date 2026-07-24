@@ -1,34 +1,47 @@
-FROM nvidia/cuda:12.2.0-base-ubuntu22.04
+# syntax=docker/dockerfile:1.7
+FROM nvidia/cuda:12.9.2-cudnn-runtime-ubuntu24.04
 
-WORKDIR /app
-ENV DEBIAN_FRONTEND=noninteractive
-
-COPY --from=ghcr.io/astral-sh/uv:0.9.28 /uv /uvx /bin/
-
-ENV UV_HTTP_TIMEOUT=1000 \
-    UV_HTTP_RETRIES=10 \
-    UV_SYSTEM_PYTHON=true \
-    UV_COMPILE_BYTECODE=1 \
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_LINK_MODE=copy \
-    PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,max_split_size_mb:128
+    UV_COMPILE_BYTECODE=1 \
+    HF_HOME=/app/models/huggingface \
+    TORCH_HOME=/app/models/torch \
+    XDG_CACHE_HOME=/app/models/cache
+
+COPY --from=ghcr.io/astral-sh/uv:0.10.0 /uv /uvx /usr/local/bin/
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates \
-      git \
-      python3 python3-venv python3-dev \
-      ffmpeg \
+        ca-certificates \
+        ffmpeg \
+        git \
+        libsndfile1 \
+        python3.12 \
+        python3.12-dev \
+        python3.12-venv \
     && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml uv.lock .python-version ./
+WORKDIR /app
 
+COPY pyproject.toml uv.lock README.md ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-dev --no-install-project
+    uv sync --no-dev --no-install-project
 
-COPY *.py /app/
+COPY app ./app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --no-dev
 
-ENV TRANSCRIBATION_API_HOST=0.0.0.0 \
-    TRANSCRIBATION_API_PORT=11430
+RUN mkdir -p /app/models /app/data /app/logs /app/tmp \
+    && useradd --create-home --uid 10001 appuser \
+    && chown -R appuser:appuser /app
 
-EXPOSE 11430
+USER appuser
 
-ENTRYPOINT uv run uvicorn main:app --host ${TRANSCRIBATION_API_HOST} --port ${TRANSCRIBATION_API_PORT}
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+    CMD python3.12 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:' + __import__('os').getenv('API_PORT', '8000') + '/health/live', timeout=3)"
+
+CMD ["sh", "-c", "uv run uvicorn app.main:app --host 0.0.0.0 --port ${API_PORT:-8000} --workers 1"]
