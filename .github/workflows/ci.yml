@@ -17,13 +17,6 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - run: uv sync --locked --group dev
-      - name: Generate canonical import formatting
-        run: uv run ruff check app/domain/embeddings.py --fix
-      - name: Upload canonical embeddings module
-        uses: actions/upload-artifact@v4
-        with:
-          name: canonical-embeddings-module
-          path: app/domain/embeddings.py
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest
