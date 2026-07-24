@@ -7,6 +7,7 @@ from typing import Any
 import httpx
 
 from app.core.config import Settings
+from app.domain.languages import normalize_language
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,9 +23,7 @@ class UpstreamASRClient:
         self._semaphore = asyncio.Semaphore(settings.asr_concurrency)
         self._client = httpx.AsyncClient(
             timeout=httpx.Timeout(settings.upstream_timeout_seconds),
-            headers={
-                "Authorization": f"Bearer {settings.openai_api_key}",
-            },
+            headers={"Authorization": f"Bearer {settings.openai_api_key}"},
         )
 
     async def close(self) -> None:
@@ -59,9 +58,10 @@ class UpstreamASRClient:
                 f"Upstream ASR returned {response.status_code}: {response.text[:1000]}"
             )
         payload = response.json()
+        detected_language = normalize_language(payload.get("language"))
         return UpstreamTranscription(
             text=str(payload.get("text", "")).strip(),
-            language=(str(payload["language"]).lower() if payload.get("language") else language),
+            language=detected_language or normalize_language(language),
             raw=payload,
         )
 
