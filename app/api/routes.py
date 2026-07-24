@@ -24,9 +24,7 @@ def create_router(auth: BearerAuth) -> APIRouter:
         pipeline = request.app.state.pipeline
         if pipeline.ready:
             return JSONResponse({"status": "ok"})
-        return JSONResponse(
-            {"status": "not_ready", "error": pipeline.initialization_error}, status_code=503
-        )
+        return JSONResponse({"status": "not_ready", "error": pipeline.initialization_error}, status_code=503)
 
     @router.get("/v1/models", dependencies=[Depends(auth)])
     async def models(request: Request) -> dict[str, Any]:
@@ -95,9 +93,7 @@ def create_router(auth: BearerAuth) -> APIRouter:
         max_speakers: Annotated[int | None, Form()] = None,
         return_speaker_embeddings: Annotated[bool, Form()] = True,
         merge_same_speaker_gap: Annotated[float | None, Form()] = None,
-        timestamp_granularities: Annotated[
-            list[str] | None, Form(alias="timestamp_granularities[]")
-        ] = None,
+        timestamp_granularities: Annotated[list[str] | None, Form(alias="timestamp_granularities[]")] = None,
     ) -> Any:
         source, options = await parse_and_save(
             request,
@@ -136,9 +132,7 @@ def create_router(auth: BearerAuth) -> APIRouter:
         max_speakers: Annotated[int | None, Form()] = None,
         return_speaker_embeddings: Annotated[bool, Form()] = True,
         merge_same_speaker_gap: Annotated[float | None, Form()] = None,
-        timestamp_granularities: Annotated[
-            list[str] | None, Form(alias="timestamp_granularities[]")
-        ] = None,
+        timestamp_granularities: Annotated[list[str] | None, Form(alias="timestamp_granularities[]")] = None,
     ) -> JSONResponse:
         source, options = await parse_and_save(
             request,

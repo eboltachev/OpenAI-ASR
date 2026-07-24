@@ -3,9 +3,7 @@ from __future__ import annotations
 from app.domain.models import SpeakerTurn, TimeSpan
 
 
-def merge_adjacent_same_speaker(
-    turns: list[SpeakerTurn], *, max_gap_seconds: float
-) -> list[SpeakerTurn]:
+def merge_adjacent_same_speaker(turns: list[SpeakerTurn], *, max_gap_seconds: float) -> list[SpeakerTurn]:
     if not turns:
         return []
     ordered = sorted(turns, key=lambda item: (item.start, item.end, item.speaker))
@@ -46,19 +44,11 @@ def padded_turn_bounds(
 
     if index > 0:
         previous = turns[index - 1]
-        left_limit = (
-            (previous.end + turn.start) / 2.0
-            if previous.end <= turn.start
-            else turn.start
-        )
+        left_limit = (previous.end + turn.start) / 2.0 if previous.end <= turn.start else turn.start
 
     if index + 1 < len(turns):
         following = turns[index + 1]
-        right_limit = (
-            (turn.end + following.start) / 2.0
-            if turn.end <= following.start
-            else turn.end
-        )
+        right_limit = (turn.end + following.start) / 2.0 if turn.end <= following.start else turn.end
 
     start = max(0.0, left_limit, turn.start - padding_seconds)
     end = min(audio_duration, right_limit, turn.end + padding_seconds)

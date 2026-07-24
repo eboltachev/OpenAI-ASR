@@ -54,9 +54,7 @@ class UpstreamASRClient:
                 files={"file": ("segment.wav", audio, "audio/wav")},
             )
         if response.is_error:
-            raise RuntimeError(
-                f"Upstream ASR returned {response.status_code}: {response.text[:1000]}"
-            )
+            raise RuntimeError(f"Upstream ASR returned {response.status_code}: {response.text[:1000]}")
         payload = response.json()
         detected_language = normalize_language(payload.get("language"))
         return UpstreamTranscription(

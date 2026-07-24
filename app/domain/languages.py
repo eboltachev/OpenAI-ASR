@@ -15,13 +15,7 @@ _LANGUAGE_ALIASES = {
 def normalize_language(value: str | None) -> str | None:
     if value is None:
         return None
-    normalized = (
-        value.strip()
-        .lower()
-        .replace("_", "-")
-        .replace("\u02bb", "'")
-        .replace("\u2018", "'")
-    )
+    normalized = value.strip().lower().replace("_", "-").replace("\u02bb", "'").replace("\u2018", "'")
     if not normalized:
         return None
     if normalized in _LANGUAGE_ALIASES:

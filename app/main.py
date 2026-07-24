@@ -49,8 +49,7 @@ app = FastAPI(
     title="OpenAI ASR",
     version="1.0.0",
     description=(
-        "OpenAI-compatible ASR with multilingual diarization, forced alignment "
-        "and speaker embeddings"
+        "OpenAI-compatible ASR with multilingual diarization, forced alignment and speaker embeddings"
     ),
     lifespan=lifespan,
 )
@@ -58,9 +57,7 @@ app.include_router(create_router(BearerAuth(settings)))
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_error_handler(
-    _request: Request, error: RequestValidationError
-) -> JSONResponse:
+async def validation_error_handler(_request: Request, error: RequestValidationError) -> JSONResponse:
     return JSONResponse(
         status_code=422,
         content={

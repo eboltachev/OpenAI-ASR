@@ -24,9 +24,7 @@ def build_speaker_profiles(
             )
     profiles: list[dict[str, Any]] = []
     for speaker, samples in sorted(grouped.items()):
-        centroid, similarities = aggregate_embeddings(
-            samples, similarity_floor=similarity_floor
-        )
+        centroid, similarities = aggregate_embeddings(samples, similarity_floor=similarity_floor)
         profiles.append(
             {
                 "id": speaker,

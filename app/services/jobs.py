@@ -67,9 +67,7 @@ class JobStore:
 
     def save_result(self, job_id: str, result: dict[str, Any]) -> None:
         path = self.root / job_id / "result.json"
-        path.write_text(
-            json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
 
     def recoverable(self) -> list[str]:
         jobs: list[str] = []
@@ -98,10 +96,7 @@ class JobManager:
     async def start(self) -> None:
         for job_id in self.store.recoverable():
             await self._queue.put(job_id)
-        self._tasks = [
-            asyncio.create_task(self._worker(index))
-            for index in range(self._worker_count)
-        ]
+        self._tasks = [asyncio.create_task(self._worker(index)) for index in range(self._worker_count)]
 
     async def stop(self) -> None:
         for task in self._tasks:
@@ -109,9 +104,7 @@ class JobManager:
         await asyncio.gather(*self._tasks, return_exceptions=True)
         self._tasks.clear()
 
-    async def submit(
-        self, source: Path, options: TranscriptionOptions
-    ) -> dict[str, Any]:
+    async def submit(self, source: Path, options: TranscriptionOptions) -> dict[str, Any]:
         job = self.store.create(source, options)
         await self._queue.put(job["id"])
         return self.public(job)
@@ -129,9 +122,7 @@ class JobManager:
                 options = TranscriptionOptions(**job["options"])
                 result = await self._processor(Path(job["input_path"]), options)
                 self.store.save_result(job_id, result)
-                await asyncio.to_thread(
-                    Path(job["input_path"]).unlink, missing_ok=True
-                )
+                await asyncio.to_thread(Path(job["input_path"]).unlink, missing_ok=True)
                 job["status"] = JobStatus.SUCCEEDED
                 self.store.save(job)
             except asyncio.CancelledError:
@@ -147,8 +138,4 @@ class JobManager:
 
     @staticmethod
     def public(job: dict[str, Any]) -> dict[str, Any]:
-        return {
-            key: value
-            for key, value in job.items()
-            if key not in {"input_path", "options", "worker"}
-        }
+        return {key: value for key, value in job.items() if key not in {"input_path", "options", "worker"}}

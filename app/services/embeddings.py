@@ -76,9 +76,7 @@ class SpeakerEmbeddingService:
             vector = np.asarray(value, dtype=np.float32).reshape(-1)
             return vector if vector.size else None
         except Exception:
-            logger.exception(
-                "speaker_embedding_failed", extra={"start": span.start, "end": span.end}
-            )
+            logger.exception("speaker_embedding_failed", extra={"start": span.start, "end": span.end})
             return None
 
     def _windows(self, span: TimeSpan) -> list[TimeSpan]:

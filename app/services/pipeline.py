@@ -54,18 +54,14 @@ class TranscriptionPipeline:
         async with self._local_semaphore:
             try:
                 normalized = await self.audio.normalize(source)
-                waveform, sample_rate = await asyncio.to_thread(
-                    self.audio.load_waveform, normalized
-                )
+                waveform, sample_rate = await asyncio.to_thread(self.audio.load_waveform, normalized)
                 audio_duration = waveform.shape[-1] / sample_rate
                 raw_turns, overlaps = await self.diarization.diarize(
                     normalized,
                     min_speakers=options.min_speakers,
                     max_speakers=options.max_speakers,
                 )
-                turns = merge_adjacent_same_speaker(
-                    raw_turns, max_gap_seconds=options.merge_gap_seconds
-                )
+                turns = merge_adjacent_same_speaker(raw_turns, max_gap_seconds=options.merge_gap_seconds)
                 if options.return_speaker_embeddings:
                     await self.embeddings.attach_embeddings(normalized, turns, overlaps)
 
@@ -90,28 +86,17 @@ class TranscriptionPipeline:
                         ]
                     ]
                 )
-                segments = sorted(
-                    segment_results, key=lambda item: (item["start"], item["end"])
-                )
-                words = [
-                    word for segment in segments for word in segment.get("words", [])
-                ]
+                segments = sorted(segment_results, key=lambda item: (item["start"], item["end"]))
+                words = [word for segment in segments for word in segment.get("words", [])]
                 languages = list(
-                    dict.fromkeys(
-                        segment["language"]
-                        for segment in segments
-                        if segment.get("language")
-                    )
+                    dict.fromkeys(segment["language"] for segment in segments if segment.get("language"))
                 )
                 result: JsonDict = {
                     "task": "transcribe",
                     "duration": audio_duration,
-                    "language": options.language
-                    or (languages[0] if len(languages) == 1 else "multilingual"),
+                    "language": options.language or (languages[0] if len(languages) == 1 else "multilingual"),
                     "languages": languages,
-                    "text": " ".join(
-                        segment["text"] for segment in segments if segment["text"]
-                    ).strip(),
+                    "text": " ".join(segment["text"] for segment in segments if segment["text"]).strip(),
                     "segments": segments,
                     "words": words,
                     "model": options.model,
@@ -175,7 +160,5 @@ class TranscriptionPipeline:
             "words": global_words,
             "speaker_embedding": turn.embedding,
             "speaker_embedding_quality": turn.embedding_quality,
-            "source_segments": [
-                {"start": span.start, "end": span.end} for span in turn.source_spans
-            ],
+            "source_segments": [{"start": span.start, "end": span.end} for span in turn.source_spans],
         }

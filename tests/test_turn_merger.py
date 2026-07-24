@@ -23,11 +23,7 @@ def test_padding_uses_silence_midpoints_without_crossing_speakers() -> None:
         SpeakerTurn("A", 1.0, 3.0),
         SpeakerTurn("B", 3.2, 5.0),
     ]
-    first = padded_turn_bounds(
-        turns, 0, audio_duration=8.0, padding_seconds=0.5
-    )
-    second = padded_turn_bounds(
-        turns, 1, audio_duration=8.0, padding_seconds=0.5
-    )
+    first = padded_turn_bounds(turns, 0, audio_duration=8.0, padding_seconds=0.5)
+    second = padded_turn_bounds(turns, 1, audio_duration=8.0, padding_seconds=0.5)
     assert first == (0.5, 3.1)
     assert second == (3.1, 5.5)
