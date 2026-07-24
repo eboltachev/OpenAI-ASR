@@ -33,5 +33,37 @@ def merge_adjacent_same_speaker(
     return merged
 
 
+def padded_turn_bounds(
+    turns: list[SpeakerTurn],
+    index: int,
+    *,
+    audio_duration: float,
+    padding_seconds: float,
+) -> tuple[float, float]:
+    turn = turns[index]
+    left_limit = 0.0
+    right_limit = audio_duration
+
+    if index > 0:
+        previous = turns[index - 1]
+        left_limit = (
+            (previous.end + turn.start) / 2.0
+            if previous.end <= turn.start
+            else turn.start
+        )
+
+    if index + 1 < len(turns):
+        following = turns[index + 1]
+        right_limit = (
+            (turn.end + following.start) / 2.0
+            if turn.end <= following.start
+            else turn.end
+        )
+
+    start = max(0.0, left_limit, turn.start - padding_seconds)
+    end = min(audio_duration, right_limit, turn.end + padding_seconds)
+    return start, max(start, end)
+
+
 def intersection_duration(first: TimeSpan, second: TimeSpan) -> float:
     return max(0.0, min(first.end, second.end) - max(first.start, second.start))
