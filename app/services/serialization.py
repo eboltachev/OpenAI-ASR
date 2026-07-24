@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
+import numpy as np
+
 from app.domain.embeddings import WeightedEmbedding, aggregate_embeddings
 
 
@@ -13,8 +15,6 @@ def build_speaker_profiles(
     for segment in segments:
         embedding = segment.get("speaker_embedding")
         if embedding:
-            import numpy as np
-
             grouped[segment["speaker"]].append(
                 WeightedEmbedding(
                     vector=np.asarray(embedding, dtype=np.float32),
@@ -24,7 +24,9 @@ def build_speaker_profiles(
             )
     profiles: list[dict[str, Any]] = []
     for speaker, samples in sorted(grouped.items()):
-        centroid, similarities = aggregate_embeddings(samples, similarity_floor=similarity_floor)
+        centroid, similarities = aggregate_embeddings(
+            samples, similarity_floor=similarity_floor
+        )
         profiles.append(
             {
                 "id": speaker,
@@ -41,7 +43,7 @@ def build_speaker_profiles(
 
 def to_srt(segments: list[dict[str, Any]]) -> str:
     def timestamp(value: float) -> str:
-        milliseconds = int(round(value * 1000))
+        milliseconds = round(value * 1000)
         hours, remainder = divmod(milliseconds, 3_600_000)
         minutes, remainder = divmod(remainder, 60_000)
         seconds, millis = divmod(remainder, 1000)
@@ -58,7 +60,7 @@ def to_srt(segments: list[dict[str, Any]]) -> str:
 
 def to_vtt(segments: list[dict[str, Any]]) -> str:
     def timestamp(value: float) -> str:
-        milliseconds = int(round(value * 1000))
+        milliseconds = round(value * 1000)
         hours, remainder = divmod(milliseconds, 3_600_000)
         minutes, remainder = divmod(remainder, 60_000)
         seconds, millis = divmod(remainder, 1000)
