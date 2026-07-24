@@ -55,7 +55,7 @@ class Settings:
     alignment_models: dict[str, str]
 
     @classmethod
-    def from_env(cls) -> "Settings":
+    def from_env(cls) -> Settings:
         alignment_models: dict[str, str] = {}
         raw_json = os.getenv("ALIGNMENT_MODELS_JSON", "").strip()
         if raw_json:
