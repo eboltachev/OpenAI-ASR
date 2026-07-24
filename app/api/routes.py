@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Uplo
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from app.core.security import BearerAuth
+from app.domain.languages import normalize_language
 from app.domain.models import JobStatus, TranscriptionOptions
 from app.services.serialization import to_srt, to_vtt
 
@@ -62,7 +63,7 @@ def create_router(auth: BearerAuth) -> APIRouter:
         source = await request.app.state.pipeline.audio.save_upload(file)
         options = TranscriptionOptions(
             model=model or settings.default_asr_model,
-            language=language.lower() if language else None,
+            language=normalize_language(language),
             prompt=prompt,
             temperature=temperature,
             response_format=response_format,
@@ -94,7 +95,9 @@ def create_router(auth: BearerAuth) -> APIRouter:
         max_speakers: Annotated[int | None, Form()] = None,
         return_speaker_embeddings: Annotated[bool, Form()] = True,
         merge_same_speaker_gap: Annotated[float | None, Form()] = None,
-        timestamp_granularities: Annotated[list[str] | None, Form(alias="timestamp_granularities[]")] = None,
+        timestamp_granularities: Annotated[
+            list[str] | None, Form(alias="timestamp_granularities[]")
+        ] = None,
     ) -> Any:
         source, options = await parse_and_save(
             request,
@@ -133,7 +136,9 @@ def create_router(auth: BearerAuth) -> APIRouter:
         max_speakers: Annotated[int | None, Form()] = None,
         return_speaker_embeddings: Annotated[bool, Form()] = True,
         merge_same_speaker_gap: Annotated[float | None, Form()] = None,
-        timestamp_granularities: Annotated[list[str] | None, Form(alias="timestamp_granularities[]")] = None,
+        timestamp_granularities: Annotated[
+            list[str] | None, Form(alias="timestamp_granularities[]")
+        ] = None,
     ) -> JSONResponse:
         source, options = await parse_and_save(
             request,
