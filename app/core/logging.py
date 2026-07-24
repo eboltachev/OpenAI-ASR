@@ -8,11 +8,11 @@ import sys
 import threading
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 
 class JsonFormatter(logging.Formatter):
-    _reserved = set(logging.makeLogRecord({}).__dict__)
+    _reserved: ClassVar[set[str]] = set(logging.makeLogRecord({}).__dict__)
 
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
