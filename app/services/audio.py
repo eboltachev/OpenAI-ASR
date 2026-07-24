@@ -18,7 +18,9 @@ class AudioService:
         self._max_upload_bytes = max_upload_bytes
         self._temp_dir.mkdir(parents=True, exist_ok=True)
 
-    async def save_upload(self, upload: UploadFile, destination: Path | None = None) -> Path:
+    async def save_upload(
+        self, upload: UploadFile, destination: Path | None = None
+    ) -> Path:
         suffix = Path(upload.filename or "audio.bin").suffix[:12]
         path = destination or self._temp_dir / f"{uuid4().hex}{suffix}"
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -30,7 +32,12 @@ class AudioService:
                     if total > self._max_upload_bytes:
                         raise HTTPException(
                             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                            detail={"error": {"message": "Audio file is too large", "type": "invalid_request_error"}},
+                            detail={
+                                "error": {
+                                    "message": "Audio file is too large",
+                                    "type": "invalid_request_error",
+                                }
+                            },
                         )
                     target.write(chunk)
         except Exception:
@@ -74,7 +81,9 @@ class AudioService:
         return waveform, sample_rate
 
     @staticmethod
-    def crop(waveform: torch.Tensor, sample_rate: int, start: float, end: float) -> torch.Tensor:
+    def crop(
+        waveform: torch.Tensor, sample_rate: int, start: float, end: float
+    ) -> torch.Tensor:
         first = max(0, int(start * sample_rate))
         last = min(waveform.shape[-1], int(end * sample_rate))
         return waveform[..., first:last]
