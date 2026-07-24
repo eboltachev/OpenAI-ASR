@@ -9,15 +9,19 @@ _LANGUAGE_ALIASES = {
     "узбекский": "uz",
     "узбекский язык": "uz",
     "o'zbek": "uz",
-    "oʻzbek": "uz",
-    "o‘zbek": "uz",
 }
 
 
 def normalize_language(value: str | None) -> str | None:
     if value is None:
         return None
-    normalized = value.strip().lower().replace("_", "-")
+    normalized = (
+        value.strip()
+        .lower()
+        .replace("_", "-")
+        .replace("\u02bb", "'")
+        .replace("\u2018", "'")
+    )
     if not normalized:
         return None
     if normalized in _LANGUAGE_ALIASES:
